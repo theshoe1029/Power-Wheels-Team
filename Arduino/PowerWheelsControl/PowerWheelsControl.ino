@@ -16,6 +16,10 @@ bool activateRadio = false;
 int radioThrottle;
 int radioTurn;
 int radioAngle = 0;
+int toggle;
+int currentState;
+int mode = 0;
+bool activateSerial = false;
 
 
 void stoppy()
@@ -77,100 +81,109 @@ void resetSerial()
   params[1] = "";
 }
 
+void detectToggle()
+{
+  toggle = pulseIn(A0, HIGH, 25000);
+  if (toggle < 1250)
+    mode = 0;
+  else
+    mode = 1;
+}
+
 void autonomous()
 {
-  timeThrottle(100,5000);
-  turn(45);
-  turn(-45);
-  timeThrottle(-100,5000);
+  Serial.println("You ran auto");
 }
 
 void serialEvent()
 {
-  if(Serial.available())
-  {
+  if (activateSerial) {
+    detectToggle();
     resetSerial();
-    input = Serial.readString();
-    for (int i = 0; i < input.length(); i ++)
+    if (Serial.available())
     {
-      if (isAlpha(input.charAt(i)))
-        commands[0] += input[i];
-      else
-        commands[1] += input[i];
+      resetSerial();
+      detectToggle();
+      input = Serial.readString();
+      for (int i = 0; i < input.length(); i ++)
+      {
+        if (isAlpha(input.charAt(i)))
+          commands[0] += input[i];
+        else
+          commands[1] += input[i];
+      }
+      for (int i = 0; i < commands[1].length(); i ++)
+      {
+        if (isPunct(commands[1].charAt(i)))
+          commaIndex = i;
+      }
+
+      if (commaIndex == 0)
+        commaIndex = 10;
+
+      for (int i = 0; i < commaIndex; i ++)
+        params[0] += commands[1].charAt(i);
+      for (int i = commaIndex + 1; i < commands[1].length(); i ++)
+        params[1] += commands[1].charAt(i);
+
+      intParams[0] = params[0].toInt();
+      intParams[1] = params[1].toInt();
+
+      if (commands[0] != "")
+        Serial.print(commands[0]);
+      if (params[0] != "")
+        Serial.print(params[0]);
+      if (params[1] != "")
+        Serial.print(params[1]);
+      Serial.println();
     }
-    for (int i = 0; i < commands[1].length(); i ++)
+
+    if (commands[0] == "radio")
+      activateRadio = true;
+
+    if (commands[0] == "stopradio")
+      activateRadio = false;
+
+    //Motors run forever at set speed
+    if (commands[0] == "m")
+      throttle(intParams[0]);
+
+    //Motors run for time at set speed
+    if (commands[0] == "mt")
     {
-      if (isPunct(commands[1].charAt(i)))
-        commaIndex = i;
+      timeThrottle(intParams[0], intParams[1]);
+      resetSerial();
     }
 
-    if(commaIndex == 0)
-      commaIndex = 10;
-    
-    for (int i = 0; i < commaIndex; i ++)
-      params[0] += commands[1].charAt(i);
-    for (int i = commaIndex + 1; i < commands[1].length(); i ++)
-      params[1] += commands[1].charAt(i);
+    //Turn wheels at angle
+    if (commands[0] == "t")
+      turn(intParams[0]);
 
-    intParams[0] = params[0].toInt();
-    intParams[1] = params[1].toInt();
+    //Stop robot
+    if (commands[0] == "s")
+      stoppy();
 
-    if(commands[0] != "")
-      Serial.print(commands[0]);
-    if(params[0] != "")
-      Serial.print(params[0]);
-    if(params[1] != "")
-      Serial.print(params[1]);
-    Serial.println();
+    if (commands[0] == "run")
+      autonomous();
   }
-
-  if(commands[0] == "radio")
-    activateRadio = true;
-
-  if(commands[0] == "stopradio")
-    activateRadio = false;
-
-  //Motors run forever at set speed
-  if (commands[0] == "m")
-    throttle(intParams[0]);
-
-  //Motors run for time at set speed
-  if (commands[0] == "mt")
-  {
-    timeThrottle(intParams[0], intParams[1]);
-    resetSerial();
-  }
-
-  //Turn wheels at angle
-  if (commands[0] == "t")
-    turn(intParams[0]);
-
-  //Stop robot
-  if(commands[0] == "s")
-    stoppy();    
-    
-  if(commands[0] == "run")
-    autonomous();
 }
 
 void radioEvent()
 {
-  if(activateRadio)
+  if (activateRadio)
   {
+    detectToggle();
     radioThrottle = pulseIn(6, HIGH, 25000);
     radioTurn = pulseIn(7, HIGH, 25000);
 
     double scaledRadioThrottle = scaleRadioThrottle(radioThrottle);
     double scaledRadioTurn = scaleRadioTurn(radioTurn);
 
-    Serial.print("Angle :");
-    Serial.println(scaledRadioTurn);
-
-    if(radioThrottle < (1505 - epsilon))
+    if (radioThrottle < (1505 - epsilon))
       throttleServo.write(scaledRadioThrottle);
-    if(radioThrottle > (1525 + epsilon))
+    if (radioThrottle > (1525 + epsilon))
       throttleServo.write(scaledRadioThrottle);
-      if(radioThrottle < (1525 + epsilon) && radioThrottle > (1505 - epsilon))
+    if (radioThrottle < (1525 + epsilon) && radioThrottle > (1505 - epsilon))
       throttle(0);
 
     steerServo.write(scaledRadioTurn);
@@ -191,6 +204,17 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  serialEvent();
+  detectToggle();
   radioEvent();
+  serialEvent();
+  if (mode == 0)
+  {
+    activateSerial = true;
+    activateRadio = false;
+  }
+  else
+  {
+    activateRadio = true;
+    activateSerial = false;
+  }
 }
