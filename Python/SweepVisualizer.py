@@ -57,4 +57,3 @@ with Sweep('COM4') as sweep:
                         #Update screen with all the points from the sample
                         pygame.display.update()
                         screen.fill(WHITE)
-

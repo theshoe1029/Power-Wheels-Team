@@ -98,13 +98,45 @@ void autonomous()
 void serialEvent()
 {
   if (activateSerial) {
-    detectToggle();
+    //detectToggle();
     resetSerial();
     if (Serial.available())
     {
+      char ch;
+      int num;
+      
       resetSerial();
+      //detectToggle();
+      input = Serial.readStringUntil('\n');
+      sscanf((const char*)input.c_str(), "%c%d", &ch, &num);
+      steerServo.write(num);
+      /*for (int i = 0; i < input.length(); i ++)
+      {
+        if (isAlpha(input.charAt(i)))
+          commands[0] += input[i];
+        else
+          commands[1] += input[i];
+      }
+      for (int i = 0; i < commands[1].length(); i ++)
+      {
+        if (isPunct(commands[1].charAt(i)))
+          commaIndex = i;
+      }
+
+      if (commaIndex == 0)
+        commaIndex = 10;
+
+      for (int i = 0; i < commaIndex; i ++)
+        params[0] += commands[1].charAt(i);
+      for (int i = commaIndex + 1; i < commands[1].length(); i ++)
+        params[1] += commands[1].charAt(i);
+
+      intParams[0] = params[0].toInt();
+      intParams[1] = params[1].toInt();/*
+      
+      /*resetSerial();
       detectToggle();
-      input = Serial.readString();
+      input = Serial.readStringUntil("\n");
       for (int i = 0; i < input.length(); i ++)
       {
         if (isAlpha(input.charAt(i)))
@@ -127,18 +159,18 @@ void serialEvent()
         params[1] += commands[1].charAt(i);
 
       intParams[0] = params[0].toInt();
-      intParams[1] = params[1].toInt();
+      intParams[1] = params[1].toInt();*/
 
-      if (commands[0] != "")
+      /*if (commands[0] != "")
         Serial.print(commands[0]);
       if (params[0] != "")
         Serial.print(params[0]);
       if (params[1] != "")
         Serial.print(params[1]);
-      Serial.println();
+      Serial.println();*/
     }
 
-    if (commands[0] == "radio")
+    /*if (commands[0] == "radio")
       activateRadio = true;
 
     if (commands[0] == "stopradio")
@@ -155,16 +187,15 @@ void serialEvent()
       resetSerial();
     }
 
-    //Turn wheels at angle
-    if (commands[0] == "t")
-      turn(intParams[0]);
-
     //Stop robot
     if (commands[0] == "s")
       stoppy();
 
     if (commands[0] == "run")
-      autonomous();
+      autonomous();*/
+
+    //Turn wheels at angle
+    //if (commands[0] == "t")turn(intParams[0]);
   }
 }
 
@@ -204,8 +235,8 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  detectToggle();
-  radioEvent();
+  //detectToggle();
+  //radioEvent();
   serialEvent();
   if (mode == 0)
   {
