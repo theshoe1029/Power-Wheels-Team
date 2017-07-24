@@ -66,6 +66,7 @@ with Sweep('COM4')as sweep:
         summation = 0
         angleAvg = 0
         numAngles = 0
+        position = 0
         
         while True:
                 pygame.font.init()
@@ -93,11 +94,11 @@ with Sweep('COM4')as sweep:
 
                                         if(angleArray < 10 or angleArray > 350 and scans[i][1] < 500):
                                                 if(angleArray > 335):
-                                                        angle = (angleArray - 360)
+                                                        angle = 360 - angleArray
                                                         summation += angle
                                                         numAngles = numAngles + 1
                                                 elif(angleArray < 25):
-                                                        angle = angleArray
+                                                        angle = -angleArray
                                                         summation += angle
                                                         numAngles = numAngles + 1
                                                         
@@ -118,15 +119,17 @@ with Sweep('COM4')as sweep:
                         if(numAngles != 0):
                                 target = summation/numAngles
 
-                        if(target > 0):
-                                arduino.write("t10\n")
-                        else:
-                                arduino.write("t-10\n")
-                        
+                        if(target > 0 and position < 60):
+                                position = position + 5
+                        elif(target < 0 and position > -60):
+                                position = position - 5
+
+                        arduino.write("t%d\n"%position)
                         arduino.write("m%d\n"%speed)
                         
                         print("Target speed %d"%speed)
-                        print("Target angle %d"%target)
+                        print("Target angle %d"%position)
+                        print("Angle read %d"%target)
 
                         summation = 0
                         numAngles = 0

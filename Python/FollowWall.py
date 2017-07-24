@@ -5,7 +5,6 @@ from sweeppy import Scan
 from sweeppy import Sample
 from array import array
 from pygame.locals import *
-
 pygame.init()
 
 #This sets up the colors and size of the pygame window
@@ -61,72 +60,73 @@ with Sweep('COM4')as sweep:
         sweep.set_motor_speed(5)
         sweep.set_sample_rate(500)
         sweep.start_scanning()
-
-        speed = 0
-        target = 0
-        summation = 0
-        angleAvg = 0
-        numAngles = 0
+        
+        position = 0
+        wall_distance = 150
+        kp = 0.01
         
         while True:
-                pygame.font.init()
-                
                 #Refresh the screen after each scan
                 screen.fill(WHITE)
+
                 for scan in sweep.get_scans():
                         #Store samples in scan array
                         scans = scan.samples[:]
-                        
+
+                        error = 0
+                        distance_avg = 0
+                        summation = 0
+                        num_distances = 0
+
                         #Loop for each sample
                         for i in range(len(scans)):
                                 #Store direction property of each sample in angles array
-                                angles = str(scans[i][0])
-                                #Remove last three digits of anglea
-                                if(len(angles[:]) == 6):
-                                        angleArray = int(angles[:3])
-                                else: 
-                                        angleArray = int(angles[:2])
-
-                                summation += angleArray
-                                numAngles += 1
-
-                                if(numAngles != 0):
-                                        target = summation/numAngles
+                                angle = str(scans[i][0])
+                                adjustedAngle = int(angle)/1000
                                 
                                 #Calculate x and y components of each sample based on basic trig
                                 if scans[i][2] > 100:
-                                        x = int(0.75 * (scans[i][1] * math.cos(angleArray * math.pi / 180)))
-                                        y = int(0.75 * (scans[i][1] * math.sin(angleArray * math.pi / 180)))
+                                        x = int(scans[i][1] * math.cos(adjustedAngle * math.pi / 180))
+                                        y = int(scans[i][1] * math.sin(adjustedAngle * math.pi / 180))
 
-                                        if(target < 180 and target > 0 and scans[i][1] < 100):
-                                                speed = 10
-                                                arduino.write("t-20\n")
-                                                print("Wall is in range")
-                                                pygame.draw.circle(screen, (255, 0, 0), [800 - (y + 400), 600 - (x + 300)], 2)
+                                        if(adjustedAngle < 40 and adjustedAngle > 20 and x < 500 and x > 10):
+                                                summation = summation + x
+                                                num_distances = num_distances + 1
+                                                        
+                                                pygame.draw.circle(screen, (0, 0, 255), [800 - (y + 400), 600 - (x + 300)], 5)
                                         else:
-                                                speed = 0
-                                                arduino.write("t20\n")
-                                                print("Wall out of range")
                                                 #Draw circle on screen based on x and y components
                                                 pygame.draw.circle(screen, BLACK, [800 - (y + 400), 600 - (x + 300)], 2)
+
+
+                        distance_avg = wall_distance
+                        if(num_distances != 0):
+                                distance_avg = summation/num_distances
+                                
+                        error = distance_avg - wall_distance
+                                
+                        position = position + (error * kp)
+
+                        pygame.draw.line(screen, (0, 255, 0), (400 - wall_distance,0), (400 - wall_distance, 600), 1)
+
+                        pygame.draw.line(screen, (255, 0, 0), (400 - distance_avg,0), (400 - distance_avg, 600), 1)
                         
                         #Update screen with all the points from the sample
                         pygame.display.update()
                         screen.fill(WHITE)
                         keyboard()
-
-                        if(numAngles != 0):
-                                target = summation/numAngles
-
-                        if(target > 0):
-                                arduino.write("t10\n")
-                        else:
-                                arduino.write("t-10\n")
                         
-                        arduino.write("m%d\n"%speed)
-                        
-                        print("Target speed %d"%speed)
-                        print("Target angle %d"%target)
+                        if(position > 10):
+                                position = 10
+                        if(position < -10):
+                                position = -10
 
-                        summation = 0
-                        numAngles = 0
+                        arduino.write("t%d\n"%position)
+                        
+                        print("Target angle %d"%position)
+                        print("Error %d"%error)
+
+
+                 
+
+
