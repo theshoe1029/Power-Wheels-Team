@@ -19,62 +19,46 @@ screen.fill(WHITE)
 pygame.display.update()
 pygame.display.set_caption('Follow Wall')
 
-arduino = serial.Serial('COM9')
+arduino = serial.Serial('COM7')
 print(arduino.name)
 right = False
-
-def turnRobot(direction):
-        global turn
-        turn = turn + (1 * direction)
-        arduino.write("t")
-        arduino.write(turn)
-        arduino.write("\n")
+max_turn = 28
+wall_distance = 100
+kp = 10
+y_off = 300
 
 def keyboard():
         for event in pygame.event.get():
-            
-            # determin if X was clicked, or Ctrl+W or Alt+F4 was used 
+            global right
+            # determine if X was clicked, or Ctrl+W or Alt+F4 was used 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_w:
-                        arduino.write("m10\n")
-                        print("Throttle on")
-                elif event.key == pygame.K_s:
-                        arduino.write("m-10\n")
-                        print("Throttle back")
-                elif event.key == pygame.K_e:
-                        arduino.write("m0\n")
-                        print("Throttle off")
-
-                if event.key == pygame.K_a:
-                        print("Turning left")
-                elif event.key == pygame.K_d:
-                        arduino.write("Turning right")
-                        
+                
                 if event.key == pygame.K_l:
                         right = False
+                        print(right)
 
                 if event.key == pygame.K_r:
                         right = True
-                        
+                        print(right)
+
                 if event.key == pygame.K_q:
                         arduino.close()
                         pygame.quit()
                         sys.exit()
 
 #Initialize the sweep sensor
-with Sweep('COM4')as sweep:
+with Sweep('COM5')as sweep:
+        
         #Set the sweep motor speeds and start scanning
         sweep.set_motor_speed(5)
         sweep.set_sample_rate(500)
         sweep.start_scanning()
         
         position = 0
-        wall_distance = 200
-        kp = 0.5
-        
            
         for scan in sweep.get_scans():
             screen.fill(WHITE)
+            print(right);
 
             summation = 0
             num_distances = 0
@@ -84,31 +68,35 @@ with Sweep('COM4')as sweep:
 
                 #Store direction property of each sample in angles array
                 angle = sample.angle/1000
+
+                x = int(sample.distance * math.sin(angle * math.pi / 180))
+                y = int(sample.distance * math.cos(angle * math.pi / 180))
                     
                 #Calculate x and y components of each sample based on basic trig
-                if sample.distance > 100:
-                        x = int(sample.distance * math.sin(angle * math.pi / 180))
-                        y = int(sample.distance * math.cos(angle * math.pi / 180))
-
-                        if(y < 100 and y > 0 and x < 750 and x > 10 and right == False):
+                if (y > 20):
+                        if(y < 100 and y > -100 and x < 750 and x > 0 and right == False):
                                 summation = summation + x
                                 num_distances = num_distances + 1
                                         
-                                pygame.draw.circle(screen, (0, 0, 255), [800 - (x + 400), 600 - (y + 300)], 5)
-                        elif(y < 100 and y > 0 and x < 10 and x > -750 and right == True):
+                                pygame.draw.circle(screen, (0, 0, 255), [800 - (x + 400), 600 - (y + y_off)], 5)
+                        elif(y < 100 and y > -100 and x < 0 and x > -750 and right == True):
                                 summation = summation + x
                                 num_distances = num_distances + 1
                                         
-                                pygame.draw.circle(screen, (0, 0, 255), [800 - (x + 400), 600 - (y + 300)], 5)
+                                pygame.draw.circle(screen, (0, 0, 255), [800 - (x + 400), 600 - (y + y_off)], 5)
                         else:
                                 #Draw circle on screen based on x and y components
-                                pygame.draw.circle(screen, BLACK, [800 - (x + 400), 600 - (y + 300)], 2)
+                                pygame.draw.circle(screen, BLACK, [800 - (x + 400), 600 - (y + y_off)], 2)
 
 
             distance_avg = wall_distance
             if(num_distances != 0):
                     distance_avg = summation/num_distances
-                
+            pygame.draw.line(screen, (100, 100, 100), (400,0), (400, 600), 1)
+            
+            pygame.draw.rect(screen, (100, 100, 100), Rect(400-32, 600-(y_off+0), 64, 90), 1)
+            
+                #Draws center line
             if(right == False):
                 pygame.draw.line(screen, (0, 255, 0), (400 - wall_distance,0), (400 - wall_distance, 600), 1)
                 pygame.draw.line(screen, (255, 0, 0), (400 - distance_avg,0), (400 - distance_avg, 600), 1)
@@ -128,10 +116,10 @@ with Sweep('COM4')as sweep:
             screen.fill(WHITE)
             keyboard()
             
-            if(position > 20):
-                    position = 20
-            if(position < -20):
-                    position = -20
+            if(position > max_turn):
+                    position = max_turn
+            if(position < -max_turn):
+                    position = -max_turn
 
             arduino.write("t%d\n"%position)
             
