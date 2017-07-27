@@ -7,6 +7,9 @@ from array import array
 from pygame.locals import *
 pygame.init()
 
+#initializes font
+myfont = pygame.font.SysFont("monospace", 15)
+
 #This sets up the colors and size of the pygame window
 WHITE = (255,255,255)
 BLACK = (0,0,0)
@@ -22,9 +25,9 @@ pygame.display.set_caption('Follow Wall')
 arduino = serial.Serial('COM7')
 print(arduino.name)
 right = False
-max_turn = 28
-wall_distance = 100
-kp = 10
+max_turn = 20
+wall_distance = 200
+kp = 1
 y_off = 300
 
 def keyboard():
@@ -35,11 +38,11 @@ def keyboard():
                 
                 if event.key == pygame.K_l:
                         right = False
-                        print(right)
+                        
 
                 if event.key == pygame.K_r:
                         right = True
-                        print(right)
+                        
 
                 if event.key == pygame.K_q:
                         arduino.close()
@@ -58,7 +61,7 @@ with Sweep('COM5')as sweep:
            
         for scan in sweep.get_scans():
             screen.fill(WHITE)
-            print(right);
+            #print(right);
 
             summation = 0
             num_distances = 0
@@ -66,10 +69,12 @@ with Sweep('COM5')as sweep:
             for sample in scan.samples:
                 #print(sample)
 
+                
+
                 #Store direction property of each sample in angles array
                 angle = sample.angle/1000
 
-                x = int(sample.distance * math.sin(angle * math.pi / 180))
+                x = -int(sample.distance * math.sin(angle * math.pi / 180))
                 y = int(sample.distance * math.cos(angle * math.pi / 180))
                     
                 #Calculate x and y components of each sample based on basic trig
@@ -106,22 +111,29 @@ with Sweep('COM5')as sweep:
                 pygame.draw.line(screen, (255, 0, 0), (400 - distance_avg,0), (400 - distance_avg, 600), 1)
                 error = distance_avg + wall_distance
 
-            if(error > 0):
-                position = error * kp * error
-            else:
-                position = -1 * error * error * kp
+           
+            screen.blit(myfont.render("distance_avg %d"%distance_avg, 1, (0,0,0)), (20, 480))
+            screen.blit(myfont.render("Error %d"%error, 1, (0,0,0)), (20, 500))
+
+            screen.blit(myfont.render("Adjusted Position %d"%position, 1, (0,0,0)), (20, 540))
+            
+            position = -1 * error * kp
+
+            screen.blit(myfont.render("Unadjusted Position %d"%position, 1, (0,0,0)), (20, 520))
+            
             
             #Update screen with all the points from the sample
             pygame.display.update()
             screen.fill(WHITE)
             keyboard()
+
             
+            #position limited to max turn angle
             if(position > max_turn):
                     position = max_turn
             if(position < -max_turn):
                     position = -max_turn
 
-            arduino.write("t%d\n"%position)
+            arduino.write("t%f\n"%position)
             
-            print("Target angle %d"%position)
-            print("Error %d"%error)
+           
