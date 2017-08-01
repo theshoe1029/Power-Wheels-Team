@@ -25,15 +25,20 @@ pygame.display.set_caption('Follow Wall')
 arduino = serial.Serial('COM7')
 print(arduino.name)
 right = False
+disarm = False
 max_turn = 20
-wall_distance = 200
-kp = 1
+wall_distance = 0
+kp = 0.4
 y_off = 300
-y_filter = 250
+y_filter = 170
+padding = 60
+last_error = 0
+kd = 10
 
 def keyboard():
         for event in pygame.event.get():
             global right
+            global disarm
             # determine if X was clicked, or Ctrl+W or Alt+F4 was used 
             if event.type == pygame.KEYDOWN:
                 
@@ -42,13 +47,18 @@ def keyboard():
                         
 
                 if event.key == pygame.K_r:
-                        right = True
-                        
+                        right = True  
 
                 if event.key == pygame.K_q:
                         arduino.close()
                         pygame.quit()
                         sys.exit()
+
+                if event.key == pygame.K_s:
+                        if disarm:
+                                disarm = False
+                        else:
+                                disarm = True
 
 #Initialize the sweep sensor
 with Sweep('COM5')as sweep:
@@ -80,19 +90,14 @@ with Sweep('COM5')as sweep:
                     
                 #Calculate x and y components of each sample based on basic trig
                 if (y > 20):
-                        if(y < 100 and y > -100 and x < 750 and x > 0 and right == False):
-                                summation = summation + x
-                                num_distances = num_distances + 1
-                                        
-                                pygame.draw.circle(screen, (0, 0, 255), [800 - (x + 400), 600 - (y + y_off)], 5)
-                        elif(y < 100 and y > -100 and x < 0 and x > -750 and right == True):
+                        if(y > (y_filter - padding) and abs(x) < 250 and right == False):
                                 summation = summation + x
                                 num_distances = num_distances + 1
                                         
                                 pygame.draw.circle(screen, (0, 0, 255), [800 - (x + 400), 600 - (y + y_off)], 5)
                         else:
                                 #Draw circle on screen based on x and y components
-                                pygame.draw.circle(screen, BLACK, [800 - (x + 400), 600 - (y + y_off)], 2)
+                                pygame.draw.circle(screen, BLACK, [800 - (x + 400), 600 - (y + y_off)], 1)
 
 
             distance_avg = wall_distance
@@ -102,25 +107,22 @@ with Sweep('COM5')as sweep:
             
             pygame.draw.rect(screen, (100, 100, 100), Rect(400-32, 600-(y_off+0), 64, 90), 1)
             
-            pygame.draw.line(screen, (0, 255, 0), (0,y_filter), (800, y_filter), 1)
-            
                 #Draws center line
             if(right == False):
                 pygame.draw.line(screen, (0, 255, 0), (400 - wall_distance,0), (400 - wall_distance, 600), 1)
-                pygame.draw.line(screen, (255, 0, 0), (400 - distance_avg,0), (400 - distance_avg, 600), 1)
+                pygame.draw.line(screen, (255, 0, 0), (400 - distance_avg, 0), (400 - distance_avg, 600), 1)
                 error = distance_avg - wall_distance
-            else:
-                pygame.draw.line(screen, (0, 255, 0), (400 + wall_distance,0), (400 + wall_distance, 600), 1)
-                pygame.draw.line(screen, (255, 0, 0), (400 - distance_avg,0), (400 - distance_avg, 600), 1)
-                error = distance_avg + wall_distance
+                
+            pygame.draw.line(screen, (0, 255, 0), (0,300-(y_filter-padding)), (800, 300 - (y_filter-padding)), 1)
 
-           
-            screen.blit(myfont.render("distance_avg %d"%distance_avg, 1, (0,0,0)), (20, 480))
+            screen.blit(myfont.render("Distance Avg %d"%distance_avg, 1, (0,0,0)), (20, 480))
             screen.blit(myfont.render("Error %d"%error, 1, (0,0,0)), (20, 500))
+            screen.blit(myfont.render("Last Error %d"%(error - last_error), 1, (0,0,0)), (20, 500))
 
             screen.blit(myfont.render("Adjusted Position %d"%position, 1, (0,0,0)), (20, 540))
-            
-            position = 1 * error * kp
+
+            position = (error * kp) - ((error - last_error) * kd)
+            last_error = error
 
             screen.blit(myfont.render("Unadjusted Position %d"%position, 1, (0,0,0)), (20, 520))
             
@@ -137,6 +139,8 @@ with Sweep('COM5')as sweep:
             if(position < -max_turn):
                     position = -max_turn
 
-            arduino.write("t%f\n"%position)
-            
+            if not disarm:
+                    arduino.write("t%f\n"%position)
+            else:
+                    arduino.write("t0\n")
            
