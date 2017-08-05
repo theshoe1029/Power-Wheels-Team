@@ -1,0 +1,15 @@
+{
+  "name": "sweepserver",
+  "version": "0.0.1",
+  "description": "sweepserver",
+  "main":"./sweepjs",
+  "scripts": {
+    "start": "node server.js COM3",
+    "test": "node test.js COM3"
+  },
+  "dependencies": {
+    "ws": "^1.1",
+    "serialport": "^5.0",
+    "three": "^0.86"
+  }
+}
