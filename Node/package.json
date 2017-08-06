@@ -2,10 +2,10 @@
   "name": "sweepserver",
   "version": "0.0.1",
   "description": "sweepserver",
-  "main":"./sweepjs",
+  "main": "./sweepjs",
   "scripts": {
-    "start": "node server.js COM3",
-    "test": "node test.js COM3"
+    "start": "node server.js COM4",
+    "test": "node test.js COM4"
   },
   "dependencies": {
     "ws": "^1.1",

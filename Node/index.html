@@ -20,12 +20,17 @@
 
 <div id="canvas-container"></div>
 <div>
-<button id="connectDisconnectId" onclick="connectDisconnect()">connect</button></br>
+<button id="connectDisconnectId" onclick="connectDisconnectFunc()">connect</button></br>
+
 <div id="maindivId" hidden="true" >
+<input type="checkbox" id="arduinoId" onclick="connectArduino(this)" checked=false>Arduino<input type="text" id="arduino-port" value="COM9">
+</br>
+<input type="checkbox" id="scanningId" onclick="scanning(this)" checked=false>Sweep<input type="text" id="sweep-port" value="COM4">
+</br>
+<input type="checkbox" id="androidId" onclick="connectAndroid(this)" checked=false>Android<input type="text" id="android-port" value="COM10">
+</br>
 <input type="range" oninput="throttle(this)" min="60" max="120" value="90" step="5">Throttle</br>
 <input type="range" oninput="steering(this)" min="75" max="105" value="90" step="5">Steering</br>
-<input type="checkbox" id="scanningId" onclick="scanning(this)" checked=false>Scanning</br>
-
 
 <input type="range" oninput="frontEdgeFunc(this)" min="0" max="300" value="171" >frontEdge</br>
 <input type="range" oninput="frontEdgeTolFunc(this)" min="1" max="50" value="10" >frontEdgeTol</br>
@@ -38,6 +43,7 @@
 
 
 </div>
+<div id="title">
 <p>
 Remember to open JavaScript console.</br>
 Remember to turn off browser caching.</br>
@@ -51,7 +57,18 @@ Remember to turn off browser caching.</br>
 
 <script>
 
-  
+function connectDisconnectFunc()
+{
+  if( ws==undefined )
+  {
+    resetWebSocket();
+  }
+  else
+  {
+    ws.close();
+    ws=undefined;
+  }
+}  
 
 var frontEdge=171;
 var frontEdgeTol=10;
@@ -59,8 +76,6 @@ var leftRightEdge=200;
 var signalMin=10;
 var steeringKP=0.5;
 var steeringTrim=0;
-
-
 
 var ws = undefined;
 
@@ -72,11 +87,16 @@ function resetWebSocket()
 
   ws.onopen = evt =>
   {
-  console.log("onopen");
-  document.getElementById("connectDisconnectId").innerHTML="disconnect";
-  document.getElementById("maindivId").hidden=false;
-  document.getElementById("scanningId").checked=false;
-  scanAgain=false;
+    console.log("onopen");
+    document.getElementById("connectDisconnectId").hidden=true;
+    document.getElementById("maindivId").hidden=false;
+    document.getElementById("scanningId").checked=false;
+    document.getElementById("arduinoId").checked=false;
+    document.getElementById("androidId").checked=false;
+    document.getElementById("title").hidden=true;
+    var arduinoPort = document.getElementById("arduino-port").value;
+    var androidPort = document.getElementById("android-port").value;
+    scanAgain=false;
   };
 
   ws.onclose = evt =>
@@ -179,31 +199,45 @@ function resetWebSocket()
   }
 }
 
-function connectDisconnect()
-{
-  if( ws==undefined )
-  {
-    resetWebSocket();
-  }
-  else
-  {
-    ws.close();
-    ws=undefined;
-  }
-}
-
 function scanning(cb)
 {
   if(cb.checked)
   {
+    var sweepPort = document.getElementById("sweep-port").value;
+    {
+      var msg={command:"sweepPort",value:sweepPort}
+      ws.send(JSON.stringify(msg), error => {/**/});
+    }
     scanAgain=true;
-    const msg={command:"startScanning"}
-    ws.send(JSON.stringify(msg), error => {/**/});
+    {
+      const msg={command:"startScanning"}
+      ws.send(JSON.stringify(msg), error => {/**/});
+    }
   }
   else
   {
     scanAgain=false;
     const msg={command:"stopScanning"}
+    ws.send(JSON.stringify(msg), error => {/**/});
+  }
+}
+
+function connectArduino(cb)
+{
+  var arduinoPort = document.getElementById("arduino-port").value;
+  if(cb.checked)
+  {
+    var msg={command:"arduinoPort",value:arduinoPort}
+    ws.send(JSON.stringify(msg), error => {/**/});
+  }
+}
+
+function connectAndroid(cb)
+{
+  var androidPort = document.getElementById("android-port").value;
+  if(cb.checked)
+  {
+    var msg={command:"androidPort",value:androidPort}
     ws.send(JSON.stringify(msg), error => {/**/});
   }
 }
