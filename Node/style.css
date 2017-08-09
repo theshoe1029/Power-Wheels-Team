@@ -1,0 +1,18 @@
+#canvas-container{
+	width: 1000px;
+	height: 500px;
+	margin: 25px auto;
+}
+
+#title{
+	margin: 25px 0 0 0;
+	text-align: center;
+}
+
+#connectDisconnectId{
+	margin-bottom: 10px;
+}
+
+#maindivId{
+	text-align: center;
+}

@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html>
+<header>
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Roboto:300,400,500,700" type="text/css">
+<script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+<link rel="stylesheet" type="text/css" href="style.css">
+</header>
 <head>
   <meta charset='utf-8' />
-  <style>
-      body {
-        padding: 0;
-        margin: 0;
-        display: flex;
-      }      
-      #canvas-container {
-        width: 800px;
-        height: 600px;
-      }
-    </style>
   <title>Server</title>
 </head>
 <body>
 
 <div id="canvas-container"></div>
 <div>
-<button id="connectDisconnectId" onclick="connectDisconnectFunc()">connect</button></br>
+<div id="title">
+<button id="connectDisconnectId" onclick="connectDisconnectFunc()" class="mdl-button mdl-js-button mdl-button--raised">Connect</button></br>
+<p>
+Remember to open JavaScript console</br>
+Remember to turn off browser caching</br>
+</div>
 
 <div id="maindivId" hidden="true" >
 <input type="checkbox" id="arduinoId" onclick="connectArduino(this)" checked=false>Arduino<input type="text" id="arduino-port" value="COM9">
@@ -40,21 +41,14 @@
 <input type="range" oninput="steeringKPFunc(this)" min="-10" max="10" value="0.5" step="0.1" >steeringKP</br>
 <input type="range" oninput="steeringTrimFunc(this)" min="-25" max="25" value="0" >steeringTrim</br>
 
-
 </div>
-<div id="title">
-<p>
-Remember to open JavaScript console.</br>
-Remember to turn off browser caching.</br>
-</div>
-
-
 
 <script src="./node_modules/three/build/three.js"></script>
 <script src="./node_modules/three/examples/js/controls/TrackballControls.js"></script>
 
 
 <script>
+
 function connectDisconnectFunc()
 {
   if( ws==undefined )
@@ -67,17 +61,22 @@ function connectDisconnectFunc()
     ws=undefined;
   }
 }  
+
 var frontEdge=171;
 var frontEdgeTol=10;
 var leftRightEdge=200;
 var signalMin=10;
 var steeringKP=0.5;
 var steeringTrim=0;
+
 var ws = undefined;
+
 var scanAgain=false;
+
 function resetWebSocket()
 {
-  ws = new WebSocket('ws://192.168.100.7:5001');
+  ws = new WebSocket('ws://localhost:5001');
+
   ws.onopen = evt =>
   {
     console.log("onopen");
@@ -91,6 +90,7 @@ function resetWebSocket()
     var androidPort = document.getElementById("android-port").value;
     scanAgain=false;
   };
+
   ws.onclose = evt =>
   {
     console.log("onclose");
@@ -99,12 +99,15 @@ function resetWebSocket()
     document.getElementById("scanningId").checked=true;
     scanAgain=false;
   }
+
   ws.onmessage = evt =>
   {
     var msg = JSON.parse(evt.data);
+
     if( msg.command=="scan" )
     {
       var contourPositions = contourGeometry.attributes.position.array;
+
       var ctr=0;
       var averagexx=0;
       var averageyy=0;
@@ -112,8 +115,10 @@ function resetWebSocket()
       {
         var angle=(sample.angle/1000)+270;
         angle*=Math.PI/180;
+
         var xx = Math.cos(angle) * sample.distance
         var yy = Math.sin(angle) * sample.distance
+
         if( 
           sample.signal>signalMin &&
           yy>0 &&
@@ -125,6 +130,7 @@ function resetWebSocket()
         {
           averagexx+=xx;
           averageyy+=yy;
+
           samplesGroup.children[ctr].position.x=xx;
           samplesGroup.children[ctr].position.y=yy;//frontEdge;
           samplesGroup.children[ctr].position.z=0;//-(yy-frontEdge)*0.5;
@@ -137,8 +143,10 @@ function resetWebSocket()
           ctr++;
         }
       });
+
         averagexx/=ctr;
         averageyy/=ctr;        
+
         contourGeometry.attributes.position.needsUpdate=true;
         contourGeometry.setDrawRange(0,ctr);
         for( ;ctr<500;ctr++ )
@@ -146,6 +154,7 @@ function resetWebSocket()
           samplesGroup.children[ctr].visible=false;
         }
         
+
         var segmentsPositions = segmentsGeometry.attributes.position.array;
         segmentsPositions[0*3+0]=0;
         segmentsPositions[0*3+1]=0;
@@ -155,12 +164,14 @@ function resetWebSocket()
         segmentsPositions[0*3+5]=0;
         segmentsGeometry.attributes.position.needsUpdate=true;
         segmentsGeometry.setDrawRange(0,2);
+
+
         var steering=-averagexx*steeringKP;        
         steering+=90;
         steering-=steeringTrim;
-        if(steering<1){steering=1;}
-        if(steering>179){steering=179;}
-        console.log("steering" + steering);
+        if(steering<75){steering=75;}
+        if(steering>105){steering=105;}
+
         var msg={command:"steeringServo",value:steering}
         ws.send(JSON.stringify(msg), error => {/**/});
         
@@ -170,13 +181,16 @@ function resetWebSocket()
       console.log(msg);
     }
     
+
     if(scanAgain)
     {
     const msg={command:"scan"}
     ws.send(JSON.stringify(msg), error => {/**/});
     }
+
   }
 }
+
 function scanning(cb)
 {
   if(cb.checked)
@@ -199,6 +213,7 @@ function scanning(cb)
     ws.send(JSON.stringify(msg), error => {/**/});
   }
 }
+
 function connectArduino(cb)
 {
   var arduinoPort = document.getElementById("arduino-port").value;
@@ -208,6 +223,7 @@ function connectArduino(cb)
     ws.send(JSON.stringify(msg), error => {/**/});
   }
 }
+
 function connectAndroid(cb)
 {
   var androidPort = document.getElementById("android-port").value;
@@ -217,73 +233,91 @@ function connectAndroid(cb)
     ws.send(JSON.stringify(msg), error => {/**/});
   }
 }
+
 function steering(rg)
 {
   const msg={command:"steeringServo",value:parseInt(rg.value)}
   ws.send(JSON.stringify(msg), error => {/**/});
 }
+
 function throttle(rg)
 {
   const msg={command:"throttleServo",value:parseInt(rg.value)}
   ws.send(JSON.stringify(msg), error => {/**/});  
 }
+
 function frontEdgeFunc(rg)
 {
   frontEdge=parseInt(rg.value);
   console.log("frontEdge "+frontEdge);
 }
+
 function frontEdgeTolFunc(rg)
 {
   frontEdgeTol=parseInt(rg.value);
   console.log("frontEdgeTol "+frontEdgeTol);
 }
+
 function leftRightEdgeFunc(rg)
 {
   leftRightEdge=parseInt(rg.value);
   console.log("lefitRightEdge "+leftRightEdge);
 }
+
 function signalMinFunc(rg)
 {
   signalMin=parseInt(rg.value);
   console.log("signalMin "+signalMin);
 }
+
 function steeringKPFunc(rg)
 {
   steeringKP=parseFloat(rg.value);
   console.log("steeringKP "+steeringKP);
 }
+
 function steeringTrimFunc(rg)
 {
   steeringTrim=parseInt(rg.value);
   console.log("steeringTrim "+steeringTrim);
 }
+
+
 var samplesGroup;
 var contourGeometry;
 var segmentsGeometry;
+
 var camera, scene, renderer, controls;
-      //var mesh;
-      init();
-      animate();
-      function init() {
+			//var mesh;
+			init();
+			animate();
+			function init() {
         var container=document.getElementById('canvas-container');
         camera = new THREE.PerspectiveCamera( 70, container.offsetWidth/container.offsetHeight, 10, 10000 );
         camera.position.z = 400;
-        renderer = new THREE.WebGLRenderer();
+
+				renderer = new THREE.WebGLRenderer();
+
         controls = new THREE.TrackballControls( camera, container );
-        controls.rotateSpeed = 1.0;
-        controls.zoomSpeed = 1.2;
-        controls.panSpeed = 0.8;
-        controls.noZoom = false;
-        controls.noPan = false;
-        controls.staticMoving = false;//true;
-        controls.dynamicDampingFactor = 0.3;
-        controls.keys = [ 65, 83, 68 ];
-        controls.addEventListener( 'change', render );
-        scene = new THREE.Scene();
-        var texture = new THREE.TextureLoader().load( 'crate.gif' );
-        var geometry = new THREE.BoxBufferGeometry( 2, 2, 2 );
-        var material = new THREE.MeshBasicMaterial( { map: texture } );
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.8;
+				controls.noZoom = false;
+				controls.noPan = false;
+				controls.staticMoving = false;//true;
+				controls.dynamicDampingFactor = 0.3;
+				controls.keys = [ 65, 83, 68 ];
+				controls.addEventListener( 'change', render );
+
+
+
+
+				scene = new THREE.Scene();
+				var texture = new THREE.TextureLoader().load( 'crate.gif' );
+				var geometry = new THREE.BoxBufferGeometry( 2, 2, 2 );
+				var material = new THREE.MeshBasicMaterial( { map: texture } );
         
+
         samplesGroup=new THREE.Group;
         for( var ii=0; ii<500; ii++ )
         {
@@ -294,10 +328,12 @@ var camera, scene, renderer, controls;
           samplesGroup.add(mesh);
         }
         scene.add( samplesGroup );
+
         var car= new THREE.Mesh( new THREE.BoxBufferGeometry( 40, 80, 20 ), material );
         car.position.y=-80/2;
         car.position.z=0;
         scene.add(car);
+
         
         contourGeometry = new THREE.BufferGeometry();
         var contourVertices=new Float32Array(3*500)
@@ -309,8 +345,11 @@ var camera, scene, renderer, controls;
         }
         contourGeometry.addAttribute( 'position', new THREE.BufferAttribute( contourVertices, 3 ) );
         contourGeometry.computeBoundingSphere();
+
         var contourLine=new THREE.Line( contourGeometry, new THREE.LineBasicMaterial( { color: 0xffffff, opacity: 0.5 } ) );
-        scene.add( contourLine );
+				scene.add( contourLine );
+
+
         segmentsGeometry = new THREE.BufferGeometry();
         var segmentsVertices=new Float32Array(6*500)
         for ( var ii = 0; ii < 500; ii++ ) 
@@ -324,25 +363,32 @@ var camera, scene, renderer, controls;
         }
         segmentsGeometry.addAttribute( 'position', new THREE.BufferAttribute( segmentsVertices, 3 ) );
         segmentsGeometry.computeBoundingSphere();
+
         var segmentsLine=new THREE.Line( segmentsGeometry, new THREE.LineBasicMaterial( { color: 0xff00ff, opacity: 0.5 } ) );
-        scene.add( segmentsLine );
-        renderer.setPixelRatio( window.devicePixelRatio );
+				scene.add( segmentsLine );
+
+
+
+				renderer.setPixelRatio( window.devicePixelRatio );
         
         renderer.setSize( container.offsetWidth, container.offsetHeight);//window.innerWidth, window.innerHeight );
         //document.body.appendChild( renderer.domElement );        
+
         container.appendChild( renderer.domElement );
       }
       
       function animate() {
         requestAnimationFrame( animate );
         controls.update();
-        render();
+				render();
       }
       
       function render()
       {
         renderer.render( scene, camera );
       }
+
+
 </script>
 
 
@@ -351,3 +397,8 @@ var camera, scene, renderer, controls;
 
 </body>
 </html>
+
+
+
+
+

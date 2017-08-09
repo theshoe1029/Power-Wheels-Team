@@ -2,6 +2,7 @@
 
 var arduino = undefined;
 var android = undefined;
+var sweepPort = undefined;
 
 var SerialPort = require('serialport');
 var autonomous=false;
@@ -125,8 +126,9 @@ ws.on('message', function incoming(data) {
     }
     else if(msg.command=="sweepPort")
     {
-      var sweepPort=msg.value;
+      sweepPort=msg.value;
       console.log("sweepPort " + sweepPort)
+    
     }
     else if(msg.command=="androidPort")
     {
