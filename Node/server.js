@@ -145,7 +145,8 @@ ws.on('message', function incoming(data) {
         //console.log("throttleServo "+cmd);
         arduino.write(cmd, function(err) { if (err) {console.log('Error on write: ', err.message); } });
         }
-
+		
+		if(!autonomous)
         {
         var cmd='S'+data[2]+'\n';
         //console.log("steeringServo "+cmd);
